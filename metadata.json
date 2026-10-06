@@ -1,0 +1,6 @@
+{
+  "name": "Arpi × Nachi — Our Archive",
+  "description": "A cinematic digital memory-book and relationship archive celebrating Arpi & Nachi's story.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
