@@ -4,9 +4,10 @@ import { ambientSound } from '../utils/audioSynth';
 
 interface NavbarProps {
   onOpenUploadModal: () => void;
+  isLoggedIn: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenUploadModal }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenUploadModal, isLoggedIn }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -87,7 +88,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenUploadModal }) => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs uppercase tracking-wider font-medium text-[#FAF8F5] bg-[#72222B] hover:bg-[#8B2635] transition-colors shadow-sm whitespace-nowrap"
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Add Photo</span>
+            <span>{isLoggedIn ? 'Add Photo' : 'Sign In to Add'}</span>
           </button>
         </div>
       </div>

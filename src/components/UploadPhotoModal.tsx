@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { PhotoItem } from '../types';
+import { supabase } from '../supabase';
 
 interface UploadPhotoModalProps {
   isOpen: boolean;
@@ -16,14 +17,18 @@ export const UploadPhotoModal: React.FC<UploadPhotoModalProps> = ({ isOpen, onCl
   const [category, setCategory] = useState<PhotoItem['category']>('two_of_us');
   const [style, setStyle] = useState<PhotoItem['style']>('standard');
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
+ const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+
+  if (file) {
+    setSelectedFile(file);
+
+    const reader = new FileReader();
       reader.onload = (event) => {
         setImagePreview(event.target?.result as string);
       };
@@ -31,31 +36,73 @@ export const UploadPhotoModal: React.FC<UploadPhotoModalProps> = ({ isOpen, onCl
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!imagePreview && !title) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const newPhoto: PhotoItem = {
-      id: `custom-photo-${Date.now()}`,
-      url: imagePreview || '/images/hero.jpg',
-      title: title || 'Untitled Memory',
-      caption: caption || 'A quiet, precious moment preserved forever.',
-      date: date || 'Recent 2026',
-      location: location || 'Special Place',
-      category,
-      style,
-      aspect: style === 'polaroid' ? 'portrait' : 'landscape'
-    };
+  if (!selectedFile || !title) return;
 
-    onAddPhoto(newPhoto);
+  try {
+    const fileExt = selectedFile.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `photos/${fileName}`;
+
+    // 1. Upload image to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('photo-upload')
+      .upload(filePath, selectedFile);
+
+    if (uploadError) {
+  console.error('Image upload failed:', uploadError);
+  alert(`Image upload failed: ${uploadError.message}`);
+  return;
+}
+
+    // 2. Get the public image URL
+    const { data: publicUrlData } = supabase.storage
+      .from('photo-upload')
+      .getPublicUrl(filePath);
+
+    const imageUrl = publicUrlData.publicUrl;
+
+    // 3. Save photo information in Supabase database
+    const { data, error: insertError } = await supabase
+      .from('photos')
+      .insert({
+        url: imageUrl,
+        title: title || 'Untitled Memory',
+        caption: caption || 'A quiet, precious moment preserved forever.',
+        date: date || 'Recent 2026',
+        location: location || 'Special Place',
+        category,
+        style,
+        aspect: style === 'polaroid' ? 'portrait' : 'landscape',
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Database insert failed:', insertError);
+      alert(`Photo uploaded, but saving the memory failed: ${insertError.message}`);
+      return;
+    }
+
+    // 4. Add the saved photo to the archive immediately
+    onAddPhoto(data as PhotoItem);
+
+    // 5. Close modal and reset
     onClose();
-    // Reset
     setTitle('');
     setCaption('');
     setDate('');
     setLocation('');
     setImagePreview('');
-  };
+    setSelectedFile(null);
+
+  } catch (error) {
+    console.error('Unexpected upload error:', error);
+    alert('Something went wrong. Please try again.');
+  }
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">

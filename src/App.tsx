@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from './supabase';
 import {
   INITIAL_PHOTOS,
   INITIAL_TRAITS,
@@ -22,16 +23,46 @@ import { NextChapterSection } from './components/NextChapterSection';
 import { FinalCreditsSection } from './components/FinalCreditsSection';
 import { PhotoModal } from './components/PhotoModal';
 import { UploadPhotoModal } from './components/UploadPhotoModal';
+import { Login } from './components/Login';
 
 export default function App() {
   // Photos state with LocalStorage persistence
-  const [photos, setPhotos] = useState<PhotoItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('arpi_nachi_photos_v1');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return INITIAL_PHOTOS;
+  // Photos state from Supabase
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);  
+  useEffect(() => {
+  const loadPhotos = async () => {
+    const { data, error } = await supabase
+      .from('photos')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading photos:', error);
+      return;
+    }
+
+    if (data) {
+      setPhotos(data as PhotoItem[]);
+    }
+  };
+
+  loadPhotos();
+}, []);
+const [session, setSession] = useState<any>(null);
+
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
   });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 
   // 23 Things state with LocalStorage persistence
   const [traits, setTraits] = useState<NachiTrait[]>(() => {
@@ -58,11 +89,7 @@ export default function App() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('arpi_nachi_photos_v1', JSON.stringify(photos));
-    } catch {}
-  }, [photos]);
+ 
 
   useEffect(() => {
     try {
@@ -109,20 +136,31 @@ export default function App() {
     } catch {}
   };
 
-  const scrollToSection = (id: string) => {
+   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  // Show login page if the user is not signed in
+  
   return (
     <div className="min-h-screen bg-[#121110] text-[#EAE5DE] relative selection:bg-[#72222B] selection:text-[#FAF8F5]">
       {/* 35mm Subtle Film Grain Overlay */}
       <div className="film-grain-overlay" aria-hidden="true" />
 
       {/* Navigation Header */}
-      <Navbar onOpenUploadModal={() => setIsUploadOpen(true)} />
+      <Navbar
+        onOpenUploadModal={() => {
+          if (session) {
+            setIsUploadOpen(true);
+        } else {
+          alert('Please sign in to add a memory.');
+        }
+      }}
+        isLoggedIn={!!session}
+      />
 
       {/* Main Flow: Beginning → Adventure → Spontaneity → Memories → Us → Nachi → Future → To Be Continued */}
       <main>
