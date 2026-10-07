@@ -87,6 +87,8 @@ useEffect(() => {
 
   // Upload Modal state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  // Login Modal state
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   // Sync to localStorage
  
@@ -153,14 +155,28 @@ useEffect(() => {
       {/* Navigation Header */}
       <Navbar
         onOpenUploadModal={() => {
-          if (session) {
-            setIsUploadOpen(true);
+        if (session) {
+          setIsUploadOpen(true);
         } else {
-          alert('Please sign in to add a memory.');
+          setIsLoginOpen(true);
         }
       }}
-        isLoggedIn={!!session}
+      isLoggedIn={!!session}
       />
+      {isLoginOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md">
+          <button
+          onClick={() => setIsLoginOpen(false)}
+          className="absolute top-3 right-3 z-10 text-[#FAF8F5]/70 hover:text-[#FAF8F5] text-xl"
+      >
+           ×
+          </button>
+
+      <Login onLoginSuccess={() => setIsLoginOpen(false)} />
+    </div>
+  </div>
+)}
 
       {/* Main Flow: Beginning → Adventure → Spontaneity → Memories → Us → Nachi → Future → To Be Continued */}
       <main>

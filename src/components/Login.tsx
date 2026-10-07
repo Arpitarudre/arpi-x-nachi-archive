@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  onLoginSuccess: () => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +22,9 @@ export const Login: React.FC = () => {
     });
 
     if (error) {
-      setError(error.message);
+        setError(error.message);
+    } else {
+        onLoginSuccess();
     }
 
     setLoading(false);
